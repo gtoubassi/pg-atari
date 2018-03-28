@@ -4,26 +4,6 @@ import numpy as np
 import os
 import tensorflow as tf
 
-gamma = .99
-
-class GradientClippingOptimizer(tf.train.Optimizer):
-    def __init__(self, optimizer, use_locking=False, name="GradientClipper"):
-        super(GradientClippingOptimizer, self).__init__(use_locking, name)
-        self.optimizer = optimizer
-
-    def compute_gradients(self, *args, **kwargs):
-        grads_and_vars = self.optimizer.compute_gradients(*args, **kwargs)
-        clipped_grads_and_vars = []
-        for (grad, var) in grads_and_vars:
-            if grad is not None:
-                clipped_grads_and_vars.append((tf.clip_by_value(grad, -1, 1), var))
-            else:
-                clipped_grads_and_vars.append((grad, var))
-        return clipped_grads_and_vars
-
-    def apply_gradients(self, *args, **kwargs):
-        return self.optimizer.apply_gradients(*args, **kwargs)
-
 class PolicyGradientNetwork:
     def __init__(self, numActions, baseDir, args):
         
@@ -46,13 +26,6 @@ class PolicyGradientNetwork:
         assert (len(tf.trainable_variables()) == 10),"Expected 10 trainable_variables"
         assert (len(tf.global_variables()) == 20),"Expected 20 total variables"
 
-        # build the variable copy ops
-        self.update_target = []
-        trainable_variables = tf.trainable_variables()
-        all_variables = tf.global_variables()
-        for i in range(0, len(trainable_variables)):
-			self.update_target.append(all_variables[len(trainable_variables) + i].assign(trainable_variables[i]))
-
         self.a = tf.placeholder(tf.float32, shape=[None, numActions])
         print('a %s' % (self.a.get_shape()))
         self.y_ = tf.placeholder(tf.float32, [None])
@@ -66,21 +39,14 @@ class PolicyGradientNetwork:
         linear_part = difference - quadratic_part
         errors = (0.5 * tf.square(quadratic_part)) + linear_part
         self.loss = tf.reduce_sum(errors)
-        #self.loss = tf.reduce_mean(tf.square(self.y_a - self.y_))
 
-        # (??) learning rate
-        # Note tried gradient clipping with rmsprop with this particular loss function and it seemed to suck
-        # Perhaps I didn't run it long enough
-        #optimizer = GradientClippingOptimizer(tf.train.RMSPropOptimizer(args.learning_rate, decay=.95, epsilon=.01))
-        optimizer = tf.train.RMSPropOptimizer(args.learning_rate, decay=.95, epsilon=.01)
+        optimizer = tf.train.AdamOptimizer()
         self.train_step = optimizer.minimize(self.loss)
 
         self.saver = tf.train.Saver(max_to_keep=25)
 
         # Initialize variables
         self.sess.run(tf.global_variables_initializer())
-        self.sess.run(self.update_target) # is this necessary?
-
 
         self.summary_writer = tf.summary.FileWriter(self.baseDir + '/tensorboard', self.sess.graph)
 
@@ -130,11 +96,11 @@ class PolicyGradientNetwork:
             h_fc1 = tf.nn.relu(tf.matmul(h_conv3_flat, W_fc1) + b_fc1, name="h_fc1")
             print(h_fc1)
 
-        # Sixth (Output) layer is fully connected linear layer
+        # Sixth (Output) layer is fully connected softmax layer
         with tf.variable_scope("fc2_" + name):
             W_fc2, b_fc2 = self.makeLayerVariables([512, numActions], trainable, "fc2")
 
-            y = tf.matmul(h_fc1, W_fc2) + b_fc2
+            y = tf.nn.softmax(tf.matmul(h_fc1, W_fc2) + b_fc2)
             print(y)
             
         return x, y
@@ -153,33 +119,9 @@ class PolicyGradientNetwork:
         
     def inference(self, screens):
         y = self.sess.run([self.y], {self.x: screens})
-        q_values = np.squeeze(y)
-        return np.argmax(q_values)
+        return np.squeeze(y)
         
     def train(self, batch, stepNumber):
-
-        x2 = [b.state2.getScreens() for b in batch]
-        y2 = self.y_target.eval(feed_dict={self.x_target: x2}, session=self.sess)
-
-        x = [b.state1.getScreens() for b in batch]
-        a = np.zeros((len(batch), self.numActions))
-        y_ = np.zeros(len(batch))
-        
-        for i in range(0, len(batch)):
-            a[i, batch[i].action] = 1
-            if batch[i].terminal:
-                y_[i] = batch[i].reward
-            else:
-                y_[i] = batch[i].reward + gamma * np.max(y2[i])
-
-        self.train_step.run(feed_dict={
-            self.x: x,
-            self.a: a,
-            self.y_: y_
-        }, session=self.sess)
-
-        if stepNumber % self.targetModelUpdateFrequency == 0:
-			self.sess.run(self.update_target)
 
         if stepNumber % self.targetModelUpdateFrequency == 0 or stepNumber % self.saveModelFrequency == 0:
             dir = self.baseDir + '/models'

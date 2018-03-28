@@ -24,7 +24,7 @@ class AtariEnvironment:
         self.ale.setFloat(b'repeat_action_probability', 0.0)
 
         # Load the ROM file
-        self.ale.loadROM(args.rom)
+        self.ale.loadROM(args.rom.encode())
 
         self.actionSet = self.ale.getMinimalActionSet()
         self.gameNumber = 0
@@ -80,7 +80,8 @@ class AtariEnvironment:
                 dir = self.outputDir + '/screen_cap/game-%06d' % (self.gameNumber)
                 if not os.path.isdir(dir):
                     os.makedirs(dir)
-                self.ale.saveScreenPNG(dir + '/frame-%06d.png' % (self.getEpisodeFrameNumber()))
+                file = dir + '/frame-%06d.png' % (self.getEpisodeFrameNumber())
+                self.ale.saveScreenPNG(file.encode())
 
 
         maxedScreen = np.maximum(screenRGB, prevScreenRGB)
