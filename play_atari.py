@@ -55,8 +55,8 @@ def playGame():
             state = None
 
     episodeTime = time.time() - startTime
-    print('%s %d ended with score: %d (%d frames in %fs for %d fps)' %
-        ('Episode' if isTraining else 'Eval', environment.getGameNumber(), environment.getGameScore(),
+    print('Episode %d ended with score: %d (%d frames in %fs for %d fps)' %
+        (environment.getGameNumber(), environment.getGameScore(),
         environment.getEpisodeFrameNumber(), episodeTime, environment.getEpisodeFrameNumber() / episodeTime))
     environment.resetGame()
 
@@ -65,4 +65,3 @@ def playGame():
 
 while True:
     score = playGame()
-    print("Score %d" % score)
