@@ -16,6 +16,7 @@ parser.add_argument("--normalize-weights", action='store_true', default=True, he
 parser.add_argument("--save-model-freq", type=int, default=10000, help="save the model once per 10000 training sessions")
 parser.add_argument("--observation-steps", type=int, default=50000, help="train only after this many stesp (=4 frames)")
 parser.add_argument("--model", help="tensorflow model checkpoint file to initialize from")
+parser.add_argument("--num-games-per-epoch", type=int, default=100, help="Number of games to play per training epoch (default 100)")
 parser.add_argument("rom", help="rom file to run")
 args = parser.parse_args()
 
@@ -33,6 +34,7 @@ def playGame():
     startTime = lastLogTime = time.time()
     stateReward = 0
     state = None
+    states = []
     
     while not environment.isGameOver():
   
@@ -46,22 +48,29 @@ def playGame():
         # Make the move
         oldState = state
         reward, state, isTerminal = environment.step(action)
-        
+        states.append((reward, state))
+
         if time.time() - lastLogTime > 60:
             print('  ...frame %d' % environment.getEpisodeFrameNumber())
             lastLogTime = time.time()
-
-        if isTerminal:
-            state = None
 
     episodeTime = time.time() - startTime
     print('Episode %d ended with score: %d (%d frames in %fs for %d fps)' %
         (environment.getGameNumber(), environment.getGameScore(),
         environment.getEpisodeFrameNumber(), episodeTime, environment.getEpisodeFrameNumber() / episodeTime))
+    gameScore = environment.getGameScore()
     environment.resetGame()
 
-    return environment.getGameScore()
+    return gameScore, states
+
+def trainEpoch():
+  
+    games = []
+    for i in range(args.num_games_per_epoch):
+        games.append(playGame())
+    scores, states = zip(*games)
+    baseline = np.median(scores)
 
 
 while True:
-    score = playGame()
+   trainEpoch()
