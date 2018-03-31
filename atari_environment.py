@@ -76,7 +76,7 @@ class AtariEnvironment:
                 isTerminal = 1
                 break
 
-            if self.gameNumber % self.screenCaptureFrequency == 0:
+            if (self.gameNumber + 1) % self.screenCaptureFrequency == 0:
                 dir = self.outputDir + '/screen_cap/game-%06d' % (self.gameNumber)
                 if not os.path.isdir(dir):
                     os.makedirs(dir)

@@ -26,22 +26,14 @@ class PolicyGradientNetwork:
         assert (len(tf.trainable_variables()) == 10),"Expected 10 trainable_variables"
         assert (len(tf.global_variables()) == 20),"Expected 20 total variables"
 
-        self.a = tf.placeholder(tf.float32, shape=[None, numActions])
-        print('a %s' % (self.a.get_shape()))
-        self.y_ = tf.placeholder(tf.float32, [None])
-        print('y_ %s' % (self.y_.get_shape()))
+        self.advantage = tf.placeholder(tf.float32, shape=[None, 1])
+        print('advantage %s' % (self.advantage.get_shape()))
 
-        self.y_a = tf.reduce_sum(tf.multiply(self.y, self.a), reduction_indices=1)
-        print('y_a %s' % (self.y_a.get_shape()))
-
-        difference = tf.abs(self.y_a - self.y_)
-        quadratic_part = tf.clip_by_value(difference, 0.0, 1.0)
-        linear_part = difference - quadratic_part
-        errors = (0.5 * tf.square(quadratic_part)) + linear_part
-        self.loss = tf.reduce_sum(errors)
-
-        optimizer = tf.train.AdamOptimizer()
-        self.train_step = optimizer.minimize(self.loss)
+        l = self.advantage * tf.log(self.y)
+        print('l %s' % (l.get_shape()))
+        
+        self.loss = -tf.reduce_sum(-1.0*tf.log(self.y))
+        self.train_step = tf.train.AdamOptimizer().minimize(self.loss)
 
         self.saver = tf.train.Saver(max_to_keep=25)
 
@@ -119,12 +111,12 @@ class PolicyGradientNetwork:
         
     def inference(self, screens):
         y = self.sess.run([self.y], {self.x: screens})
-        return np.squeeze(y)
-        
-    def train(self, batch, stepNumber):
+        y = np.squeeze(y)
+        print(y)
+        return np.random.choice(y.size, p=y)
 
-        if stepNumber % self.targetModelUpdateFrequency == 0 or stepNumber % self.saveModelFrequency == 0:
-            dir = self.baseDir + '/models'
-            if not os.path.isdir(dir):
-                os.makedirs(dir)
-            savedPath = self.saver.save(self.sess, dir + '/model', global_step=stepNumber)
+    def train(self, x, advantage):
+        self.train_step.run(feed_dict={
+            self.x: x,
+            self.advantage: advantage,
+        }, session=self.sess)

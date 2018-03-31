@@ -7,6 +7,7 @@ import random
 import time
 import argparse
 import pg_network
+import sys
 from atari_environment import AtariEnvironment
 from state import State
 
@@ -34,21 +35,20 @@ def playGame():
     startTime = lastLogTime = time.time()
     stateReward = 0
     state = None
-    states = []
+    xs = []
     
     while not environment.isGameOver():
-  
+
         if state is None:
             action = random.randrange(environment.getNumActions())
         else:
-            screens = np.reshape(state.getScreens(), (1, 84, 84, 4))
-            action = random.randrange(environment.getNumActions())
-            #XXX action = pgn.inference(screens)
+            x = state.getScreens()
+            action = pgn.inference(np.reshape(x, (1, 84, 84, 4)))
+            xs.append(x)
 
         # Make the move
         oldState = state
         reward, state, isTerminal = environment.step(action)
-        states.append((reward, state))
 
         if time.time() - lastLogTime > 60:
             print('  ...frame %d' % environment.getEpisodeFrameNumber())
@@ -61,16 +61,35 @@ def playGame():
     gameScore = environment.getGameScore()
     environment.resetGame()
 
-    return gameScore, states
+    return gameScore, xs
 
 def trainEpoch():
   
     games = []
     for i in range(args.num_games_per_epoch):
         games.append(playGame())
-    scores, states = zip(*games)
+
+    scores, all_xs = zip(*games)
     baseline = np.median(scores)
 
+    training_data = []
+    for score, xs in zip(scores, all_xs):
+        advantage = 1 if score > baseline else -1 #score - baseline
+        for x in xs:
+            training_data.append((advantage, x))
 
+    random.shuffle(training_data)
+    
+    batch_size = 20
+    batches = [training_data[x:x+batch_size] for x in range(0, len(training_data), batch_size)]
+    
+    print("Training with %d batches..." % (len(batches)), end='')
+    sys.stdout.flush()
+    for i, batch in enumerate(batches):
+        advantage, x = zip(*batch)
+        advantage = np.reshape(advantage, (len(advantage), 1))
+        pgn.train(x, advantage)
+    print(" Done")
+    
 while True:
    trainEpoch()
