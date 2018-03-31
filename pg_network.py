@@ -26,13 +26,14 @@ class PolicyGradientNetwork:
         assert (len(tf.trainable_variables()) == 10),"Expected 10 trainable_variables"
         assert (len(tf.global_variables()) == 20),"Expected 20 total variables"
 
-        self.advantage = tf.placeholder(tf.float32, shape=[None, 1])
-        print('advantage %s' % (self.advantage.get_shape()))
+        self.selected_action = tf.placeholder(tf.float32, shape=[None, numActions])
+        print('selected_action %s' % (self.selected_action.get_shape()))
 
-        l = self.advantage * tf.log(self.y)
-        print('l %s' % (l.get_shape()))
+        good_probabilities = tf.reduce_sum(tf.multiply(self.y, self.selected_action), reduction_indices=[1])
+        print('good_probabilities %s' % (good_probabilities.get_shape()))
+        log_probabilities = tf.log(good_probabilities)
+        self.loss = -tf.reduce_sum(log_probabilities)
         
-        self.loss = -tf.reduce_sum(-1.0*tf.log(self.y))
         self.train_step = tf.train.AdamOptimizer().minimize(self.loss)
 
         self.saver = tf.train.Saver(max_to_keep=25)
@@ -112,11 +113,13 @@ class PolicyGradientNetwork:
     def inference(self, screens):
         y = self.sess.run([self.y], {self.x: screens})
         y = np.squeeze(y)
-        print(y)
         return np.random.choice(y.size, p=y)
 
-    def train(self, x, advantage):
+    def train(self, x, selected_action):
+        # one hot encode the selected actions
+        selected_action = [np.eye(self.numActions)[i] for i in selected_action]
+      
         self.train_step.run(feed_dict={
             self.x: x,
-            self.advantage: advantage,
+            self.selected_action: selected_action,
         }, session=self.sess)

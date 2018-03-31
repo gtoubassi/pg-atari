@@ -36,7 +36,8 @@ def playGame():
     stateReward = 0
     state = None
     xs = []
-    
+    ys = []
+
     while not environment.isGameOver():
 
         if state is None:
@@ -45,6 +46,7 @@ def playGame():
             x = state.getScreens()
             action = pgn.inference(np.reshape(x, (1, 84, 84, 4)))
             xs.append(x)
+            ys.append(action)
 
         # Make the move
         oldState = state
@@ -61,7 +63,7 @@ def playGame():
     gameScore = environment.getGameScore()
     environment.resetGame()
 
-    return gameScore, xs
+    return gameScore, xs, ys
 
 def trainEpoch():
   
@@ -69,14 +71,14 @@ def trainEpoch():
     for i in range(args.num_games_per_epoch):
         games.append(playGame())
 
-    scores, all_xs = zip(*games)
-    baseline = np.median(scores)
+    scores, all_xs, all_ys = zip(*games)
+    cutoff = np.percentile(scores, .7)
 
     training_data = []
-    for score, xs in zip(scores, all_xs):
-        advantage = 1 if score > baseline else -1 #score - baseline
-        for x in xs:
-            training_data.append((advantage, x))
+    for score, xs, ys in zip(scores, all_xs, all_ys):
+        if score >= cutoff:
+            for x, y in zip(xs, ys):
+                training_data.append((x, y))
 
     random.shuffle(training_data)
     
@@ -86,9 +88,8 @@ def trainEpoch():
     print("Training with %d batches..." % (len(batches)), end='')
     sys.stdout.flush()
     for i, batch in enumerate(batches):
-        advantage, x = zip(*batch)
-        advantage = np.reshape(advantage, (len(advantage), 1))
-        pgn.train(x, advantage)
+        x, y = zip(*batch)
+        pgn.train(x, y)
     print(" Done")
     
 while True:
