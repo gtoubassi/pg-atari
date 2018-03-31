@@ -72,14 +72,13 @@ def trainEpoch():
         games.append(playGame())
 
     scores, all_xs, all_ys = zip(*games)
-    cutoff = np.percentile(scores, .7)
+    cutoff = np.percentile(scores, 70)
 
     training_data = []
     for score, xs, ys in zip(scores, all_xs, all_ys):
         if score >= cutoff:
             for x, y in zip(xs, ys):
                 training_data.append((x, y))
-
     random.shuffle(training_data)
     
     batch_size = 20
