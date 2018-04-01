@@ -17,7 +17,7 @@ parser.add_argument("--normalize-weights", action='store_true', default=True, he
 parser.add_argument("--save-model-freq", type=int, default=10000, help="save the model once per 10000 training sessions")
 parser.add_argument("--observation-steps", type=int, default=50000, help="train only after this many stesp (=4 frames)")
 parser.add_argument("--model", help="tensorflow model checkpoint file to initialize from")
-parser.add_argument("--num-games-per-epoch", type=int, default=100, help="Number of games to play per training epoch (default 100)")
+parser.add_argument("--games-per-epoch", type=int, default=100, help="Number of games to play per training epoch (default 100)")
 parser.add_argument("--learning-rate", type=float, default=.001, help="Learning rate (default .001)")
 parser.add_argument("--training-passes-per-epoch", type=int, default=1, help="How many passes over training data to make per epoch (default 1)")
 parser.add_argument("rom", help="rom file to run")
@@ -70,7 +70,7 @@ def playGame():
 def trainEpoch():
   
     games = []
-    for i in range(args.num_games_per_epoch):
+    for i in range(args.games_per_epoch):
         games.append(playGame())
 
     scores, all_xs, all_ys = zip(*games)
@@ -88,7 +88,7 @@ def trainEpoch():
       random.shuffle(training_data)
       batches = [training_data[x:x+batch_size] for x in range(0, len(training_data), batch_size)]
     
-      print("Training with %d batches..." % (len(batches)), end='')
+      print("Training pass %d of %d with %d batches..." % (training_pass+1, args.training_passes_per_epoch, len(batches)), end='')
       sys.stdout.flush()
       total_loss = 0
       for i, batch in enumerate(batches):
