@@ -20,7 +20,9 @@ parser.add_argument("--model", help="tensorflow model checkpoint file to initial
 parser.add_argument("--games-per-epoch", type=int, default=100, help="Number of games to play per training epoch (default 100)")
 parser.add_argument("--learning-rate", type=float, default=.001, help="Learning rate (default .001)")
 parser.add_argument("--training-passes-per-epoch", type=int, default=1, help="How many passes over training data to make per epoch (default 1)")
+parser.add_argument("--use-rms-prop", action='store_true', default=False, help="Use the RMSPropOptimizer instead of Adam")
 parser.add_argument("rom", help="rom file to run")
+
 args = parser.parse_args()
 
 print('Arguments: %s' % (args))

@@ -34,7 +34,12 @@ class PolicyGradientNetwork:
         log_probabilities = tf.log(good_probabilities)
         self.loss = -tf.reduce_sum(log_probabilities)
         
-        self.train_step = tf.train.AdamOptimizer(args.learning_rate).minimize(self.loss)
+        if args.use_rms_prop:
+            optimizer = tf.train.RMSPropOptimizer(args.learning_rate, decay=.95, epsilon=.01)
+        else:
+            optimizer = tf.train.AdamOptimizer(args.learning_rate)
+        
+        self.train_step = optimizer.minimize(self.loss)
 
         self.saver = tf.train.Saver(max_to_keep=25)
 
@@ -118,7 +123,7 @@ class PolicyGradientNetwork:
     def train(self, x, selected_action):
         # one hot encode the selected actions
         selected_action = [np.eye(self.numActions)[i] for i in selected_action]
-      
+
         _, loss = self.sess.run([self.train_step, self.loss], feed_dict={
             self.x: x,
             self.selected_action: selected_action,
