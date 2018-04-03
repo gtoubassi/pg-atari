@@ -8,8 +8,13 @@ import time
 import argparse
 import pg_network
 import sys
+from threading import Thread
 from atari_environment import AtariEnvironment
 from state import State
+from time import sleep
+
+#Todo:
+# 1. add eval pass that follows greedy policy vs stochastic during training
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--screen-capture-freq", type=int, default=250, help="record screens for a game this often")
@@ -21,6 +26,7 @@ parser.add_argument("--games-per-epoch", type=int, default=100, help="Number of 
 parser.add_argument("--learning-rate", type=float, default=.001, help="Learning rate (default .001)")
 parser.add_argument("--training-passes-per-epoch", type=int, default=1, help="How many passes over training data to make per epoch (default 1)")
 parser.add_argument("--use-rms-prop", action='store_true', default=False, help="Use the RMSPropOptimizer instead of Adam")
+parser.add_argument("--threads", type=int, default=1, help="Number of threads for simulating games")
 parser.add_argument("rom", help="rom file to run")
 
 args = parser.parse_args()
@@ -30,11 +36,14 @@ print('Arguments: %s' % (args))
 baseOutputDir = 'game-out-' + time.strftime("%Y-%m-%d-%H-%M-%S")
 os.makedirs(baseOutputDir)
 
-environment = AtariEnvironment(args, baseOutputDir)
+environments = []
+for i in range(args.threads):
+    environments.append(AtariEnvironment(args, baseOutputDir))
+    sleep(.2) # Voodoo, probably unecessary https://stackoverflow.com/questions/510348/how-can-i-make-a-time-delay-in-python
 
-pgn = pg_network.PolicyGradientNetwork(environment.getNumActions(), baseOutputDir, args)
+pgn = pg_network.PolicyGradientNetwork(environments[0].getNumActions(), baseOutputDir, args)
 
-def playGame():
+def playGame(environment, results):
 
     startTime = lastLogTime = time.time()
     stateReward = 0
@@ -67,13 +76,16 @@ def playGame():
     gameScore = environment.getGameScore()
     environment.resetGame()
 
-    return gameScore, xs, ys
+    results.append((gameScore, xs, ys))
 
 def trainEpoch():
   
     games = []
-    for i in range(args.games_per_epoch):
-        games.append(playGame())
+    threads = []
+    for i in range(args.games_per_epoch//len(environments)):
+        threads = [Thread(target=lambda:playGame(e, games)) for e in environments]
+        [t.start() for t in threads]
+        [t.join() for t in threads]
 
     scores, all_xs, all_ys = zip(*games)
     cutoff = np.percentile(scores, 70)
