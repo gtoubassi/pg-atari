@@ -47,10 +47,14 @@ class PolicyGradientNetwork:
         self.selected_action = tf.placeholder(tf.float32, shape=[None, numActions])
         print('selected_action %s' % (self.selected_action.get_shape()))
 
+        self.g = tf.placeholder(tf.float32, shape=[None, ])
+        print('g %s' % (self.g.get_shape()))
+
         good_probabilities = tf.reduce_sum(tf.multiply(self.y, self.selected_action), reduction_indices=[1])
         print('good_probabilities %s' % (good_probabilities.get_shape()))
         log_probabilities = tf.log(good_probabilities)
-        self.loss = -tf.reduce_sum(log_probabilities)
+        scaled_log_p = tf.multiply(self.g, log_probabilities)
+        self.loss = -tf.reduce_sum(scaled_log_p)
         
         if args.use_rms_prop:
             #optimizer = tf.train.RMSPropOptimizer(args.learning_rate, decay=.95, epsilon=.01)
@@ -139,12 +143,13 @@ class PolicyGradientNetwork:
         y = np.squeeze(y)
         return np.random.choice(y.size, p=y)
 
-    def train(self, x, selected_action):
+    def train(self, x, selected_action, g):
         # one hot encode the selected actions
         selected_action = [np.eye(self.numActions)[i] for i in selected_action]
 
         _, loss = self.sess.run([self.train_step, self.loss], feed_dict={
             self.x: x,
             self.selected_action: selected_action,
+            self.g: g
         })
         return loss
