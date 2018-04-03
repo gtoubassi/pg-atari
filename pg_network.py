@@ -4,6 +4,24 @@ import numpy as np
 import os
 import tensorflow as tf
 
+class GradientClippingOptimizer(tf.train.Optimizer):
+    def __init__(self, optimizer, use_locking=False, name="GradientClipper"):
+        super(GradientClippingOptimizer, self).__init__(use_locking, name)
+        self.optimizer = optimizer
+
+    def compute_gradients(self, *args, **kwargs):
+        grads_and_vars = self.optimizer.compute_gradients(*args, **kwargs)
+        clipped_grads_and_vars = []
+        for (grad, var) in grads_and_vars:
+            if grad is not None:
+                clipped_grads_and_vars.append((tf.clip_by_value(grad, -1, 1), var))
+            else:
+                clipped_grads_and_vars.append((grad, var))
+        return clipped_grads_and_vars
+
+    def apply_gradients(self, *args, **kwargs):
+        return self.optimizer.apply_gradients(*args, **kwargs)
+
 class PolicyGradientNetwork:
     def __init__(self, numActions, baseDir, args):
         
@@ -35,7 +53,8 @@ class PolicyGradientNetwork:
         self.loss = -tf.reduce_sum(log_probabilities)
         
         if args.use_rms_prop:
-            optimizer = tf.train.RMSPropOptimizer(args.learning_rate, decay=.95, epsilon=.01)
+            #optimizer = tf.train.RMSPropOptimizer(args.learning_rate, decay=.95, epsilon=.01)
+            optimizer = GradientClippingOptimizer(tf.train.RMSPropOptimizer(args.learning_rate, decay=.95, epsilon=.01))
         else:
             optimizer = tf.train.AdamOptimizer(args.learning_rate)
         
