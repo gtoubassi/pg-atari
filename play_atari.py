@@ -22,6 +22,7 @@ parser.add_argument("--learning-rate", type=float, help="Learning rate (default 
 parser.add_argument("--training-passes-per-epoch", type=int, default=1, help="How many passes over training data to make per epoch (default 1)")
 parser.add_argument("--use-rms-prop", action='store_true', default=False, help="Use the RMSPropOptimizer instead of Adam")
 parser.add_argument("--gamma", type=float, default=.99, help="Learning rate (default .99)")
+parser.add_argument("--batch-size", type=int, default=20, help="Batch size for training (default 20)")
 parser.add_argument("rom", help="rom file to run")
 
 args = parser.parse_args()
@@ -94,7 +95,7 @@ def trainEpoch():
         for x, y, g in zip(xs, ys, gs):
             training_data.append((x, y, g))
     
-    batch_size = 20
+    batch_size = args.batch_size
     
     for training_pass in range(args.training_passes_per_epoch):
       random.shuffle(training_data)
