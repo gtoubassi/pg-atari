@@ -10,4 +10,4 @@ echo -n "Initial loss: "
 grep loss log1.out  | head -1 | tr -d '()' | awk '{print $NF}'
 
 echo -n "Current loss: "
-grep loss log1.out  | tail -1 | tr -d '()' | awk '{print $NF}'
+grep loss $1  | tail -1 | tr -d '()' | awk '{print $NF}'
