@@ -5,3 +5,9 @@ cat $1 | awk '$1=="Episode" {SUM=SUM+$6;COUNT=COUNT+1} $1=="Training"&& SUM>0 {p
 
 echo -n "Number of parameter updates:  "
 grep Train $1 | awk '{print $7}'  | st | tail -1 | awk '{print $4}'
+
+echo -n "Initial loss: "
+grep loss log1.out  | head -1 | tr -d '()' | awk '{print $NF}'
+
+echo -n "Current loss: "
+grep loss log1.out  | tail -1 | tr -d '()' | awk '{print $NF}'
