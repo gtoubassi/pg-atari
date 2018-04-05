@@ -7,7 +7,7 @@ echo -n "Number of parameter updates:  "
 grep Train $1 | awk '{print $7}'  | st | tail -1 | awk '{print $4}'
 
 echo -n "Initial loss: "
-grep loss log1.out  | head -1 | tr -d '()' | awk '{print $NF}'
+grep loss $1  | head -1 | tr -d '()' | awk '{print $NF}'
 
 echo -n "Current loss: "
 grep loss $1  | tail -1 | tr -d '()' | awk '{print $NF}'
