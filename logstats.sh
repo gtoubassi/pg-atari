@@ -1,5 +1,8 @@
 #!/bin/bash
 
+head log1.out  | grep Arguments..Names | tr '()' '  ' | tr -d , | tr ' ' '\n' | egrep -v Namesp | egrep -v '^$'
+echo ""
+
 echo  "Last 20 epoch ave scores:"
 cat $1 | awk '$1=="Episode" {SUM=SUM+$6;COUNT=COUNT+1} $1=="Training"&& SUM>0 {printf "%f\n",SUM/COUNT;SUM=0;COUNT=0}' | tail -20
 
