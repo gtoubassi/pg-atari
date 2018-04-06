@@ -49,20 +49,29 @@ class PolicyGradientNetwork:
 
         self.g = tf.placeholder(tf.float32, shape=[None, ])
         print('g %s' % (self.g.get_shape()))
-
-        good_probabilities = tf.reduce_sum(tf.multiply(self.y, self.selected_action), reduction_indices=[1])
+        
+        stable_y = self.y + 1e-8
+        good_probabilities = tf.reduce_sum(tf.multiply(stable_y, self.selected_action), reduction_indices=[1])
         print('good_probabilities %s' % (good_probabilities.get_shape()))
         log_probabilities = tf.log(good_probabilities)
-        scaled_log_p = tf.multiply(self.g, log_probabilities)
-        self.loss = -tf.reduce_sum(scaled_log_p)
+        self.loss_reinforce = -tf.multiply(self.g, log_probabilities)
+        self.loss_reinforce_mean = tf.reduce_mean(self.loss_reinforce)
         
-        if args.use_rms_prop:
-            #optimizer = tf.train.RMSPropOptimizer(args.learning_rate, decay=.95, epsilon=.01)
-            optimizer = GradientClippingOptimizer(tf.train.RMSPropOptimizer(args.learning_rate, decay=.95, epsilon=.01))
-        else:
+        self.loss_entropy = -tf.reduce_sum(stable_y * tf.log(stable_y), 1)
+        self.loss_entropy_mean = tf.reduce_mean(self.loss_entropy)
+        
+        self.loss_total = tf.reduce_mean(self.loss_reinforce - args.entropy_loss_factor * self.loss_entropy)
+        
+        if args.optimizer == 'rms':
+            learning_rate = args.learning_rate if args.learning_rate is not None else .00025
+            optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=.95, epsilon=.01)
+        elif args.optimizer == 'adam':
+            learning_rate = args.learning_rate if args.learning_rate is not None else .001
             optimizer = tf.train.AdamOptimizer(args.learning_rate)
+
+        optimizer = GradientClippingOptimizer(optimizer)
         
-        self.train_step = optimizer.minimize(self.loss)
+        self.train_step = optimizer.minimize(self.loss_total)
 
         self.saver = tf.train.Saver(max_to_keep=25)
 
@@ -147,9 +156,9 @@ class PolicyGradientNetwork:
         # one hot encode the selected actions
         selected_action = [np.eye(self.numActions)[i] for i in selected_action]
 
-        _, loss = self.sess.run([self.train_step, self.loss], feed_dict={
+        _, loss, loss_r, loss_h = self.sess.run([self.train_step, self.loss_total, self.loss_reinforce_mean, self.loss_entropy_mean], feed_dict={
             self.x: x,
             self.selected_action: selected_action,
             self.g: g
         })
-        return loss
+        return loss, loss_r, loss_h
