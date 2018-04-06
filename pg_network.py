@@ -67,7 +67,7 @@ class PolicyGradientNetwork:
             optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=.95, epsilon=.01)
         elif args.optimizer == 'adam':
             learning_rate = args.learning_rate if args.learning_rate is not None else .001
-            optimizer = tf.train.AdamOptimizer(args.learning_rate)
+            optimizer = tf.train.AdamOptimizer(learning_rate)
 
         optimizer = GradientClippingOptimizer(optimizer)
         
