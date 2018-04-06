@@ -113,7 +113,7 @@ def trainEpoch():
       ave_loss = loss / len(batches)
       ave_loss_r = loss_r / len(batches)
       ave_loss_h = loss_h / len(batches)
-      print(" Done (loss: %f   loss_r: %f   loss_h: %f   (prob %f%%))" % (ave_loss, ave_loss_r, ave_loss_h, np.exp(-ave_loss_r)))
+      print(" Done (loss: %f  loss_r: %f  loss_h: %f)" % (ave_loss, ave_loss_r, ave_loss_h))
     
 while True:
    trainEpoch()
