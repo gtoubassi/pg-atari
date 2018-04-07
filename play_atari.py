@@ -24,6 +24,8 @@ parser.add_argument("--optimizer", choices=['rms', 'adam'], default="rms", help=
 parser.add_argument("--gamma", type=float, default=.99, help="Learning rate (default .99)")
 parser.add_argument("--batch-size", type=int, default=20, help="Batch size for training (default 20)")
 parser.add_argument("--entropy-loss-factor", type=float, default=0.01, help="Entropy loss regularization factor (0.01)")
+parser.add_argument("--clip-rewards", action='store_true', default=False, help="Clip all rewards to [-1,1] as in the nature paper")
+
 parser.add_argument("rom", help="rom file to run")
 
 args = parser.parse_args()
@@ -59,6 +61,9 @@ def playGame():
         # Make the move
         oldState = state
         reward, state, isTerminal = environment.step(action)
+        if args.clip_rewards:
+            reward = min(1, max(-1, reward))
+
         if len(xs) > 0:
             gs.append(reward)
 
