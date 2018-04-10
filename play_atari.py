@@ -25,6 +25,8 @@ parser.add_argument("--gamma", type=float, default=.99, help="Learning rate (def
 parser.add_argument("--batch-size", type=int, default=20, help="Batch size for training (default 20)")
 parser.add_argument("--entropy-loss-factor", type=float, default=0.01, help="Entropy loss regularization factor (0.01)")
 parser.add_argument("--clip-rewards", action='store_true', default=False, help="Clip all rewards to [-1,1] as in the nature paper")
+parser.add_argument("--epochs-per-batch-size-doubling", type=int, default=0, help="If set, batch_size will be doubled after this many epochs")
+parser.add_argument("--max-batch-size", type=int, default=1600, help="Batch size should max at this number if batch size doubling is in play")
 
 parser.add_argument("rom", help="rom file to run")
 
@@ -84,7 +86,7 @@ def playGame():
 
     return gameScore, xs, ys, gs
 
-def trainEpoch():
+def trainEpoch(batch_size):
   
     games = []
     for i in range(args.games_per_epoch):
@@ -97,8 +99,6 @@ def trainEpoch():
     for score, xs, ys, gs in zip(scores, all_xs, all_ys, all_gs):
         for x, y, g in zip(xs, ys, gs):
             training_data.append((x, y, g))
-    
-    batch_size = args.batch_size
     
     for training_pass in range(args.training_passes_per_epoch):
       random.shuffle(training_data)
@@ -119,6 +119,10 @@ def trainEpoch():
       ave_loss_r = loss_r / len(batches)
       ave_loss_h = loss_h / len(batches)
       print(" Done (loss: %f  loss_r: %f  loss_h: %f)" % (ave_loss, ave_loss_r, ave_loss_h))
-    
-while True:
-   trainEpoch()
+
+batch_size = args.batch_size
+for epochIndex in range(10000):
+    print("Running epoch with batch size %d" % batch_size)
+    trainEpoch(batch_size)
+    if args.epochs_per_batch_size_doubling > 0 and (epochIndex + 1) % args.epochs_per_batch_size_doubling == 0:
+        batch_size = min(args.max_batch_size, 2 * batch_size)
