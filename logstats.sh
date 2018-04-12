@@ -13,9 +13,9 @@ echo -n "Total steps (=4 frames) executed: "
 grep Episode $1 | awk '{print $7}' | tr -d '(' | awk '{SUM=SUM+$1;COUNT=COUNT+1} END{printf "%'"'"'d\n",  SUM/4}'
 
 echo -n "First / Last batch size: "
-grep batch.size $1 | head -1 | awk '{printf $NF}'
+grep epoch.with.batch.size $1 | head -1 | awk '{printf $NF}'
 echo -n " / "
-grep batch.size $1 | tail -1 | awk '{print $NF}'
+grep epoch.with.batch.size $1 | tail -1 | awk '{print $NF}'
 
 echo -n "Initial loss: "
 grep loss: $1  | head -1 | tr -d '()' | awk '{print $11}'
