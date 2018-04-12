@@ -1,6 +1,6 @@
 #!/bin/bash
 
-head log1.out  | grep Arguments..Names | tr '()' '  ' | tr -d , | tr ' ' '\n' | egrep -v Namesp | egrep -v '^$'
+head $1  | grep Arguments..Names | tr '()' '  ' | tr -d , | tr ' ' '\n' | egrep -v Namesp | egrep -v '^$'
 echo ""
 
 echo  "Last 20 epoch ave scores:"
