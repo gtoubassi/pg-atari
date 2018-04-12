@@ -27,6 +27,7 @@ parser.add_argument("--entropy-loss-factor", type=float, default=0.01, help="Ent
 parser.add_argument("--clip-rewards", action='store_true', default=False, help="Clip all rewards to [-1,1] as in the nature paper")
 parser.add_argument("--epochs-per-batch-size-doubling", type=int, default=0, help="If set, batch_size will be doubled after this many epochs")
 parser.add_argument("--max-batch-size", type=int, default=1600, help="Batch size should max at this number if batch size doubling is in play")
+parser.add_argument("--min-performance-percentile", type=int, default=0, help="Don't train on games that were in the bottom Nth percentile of this batch (default 0 meaning train on all)")
 
 parser.add_argument("rom", help="rom file to run")
 
@@ -93,13 +94,14 @@ def trainEpoch(batch_size):
         games.append(playGame())
 
     scores, all_xs, all_ys, all_gs = zip(*games)
-    #cutoff = np.percentile(scores, 70)
+    cutoff_score = np.percentile(scores, args.min_performance_percentile)
 
     training_data = []
     for score, xs, ys, gs in zip(scores, all_xs, all_ys, all_gs):
-        for x, y, g in zip(xs, ys, gs):
-            training_data.append((x, y, g))
-    
+        if score >= cutoff_score:
+            for x, y, g in zip(xs, ys, gs):
+                training_data.append((x, y, g))
+
     for training_pass in range(args.training_passes_per_epoch):
       random.shuffle(training_data)
       batches = [training_data[x:x+batch_size] for x in range(0, len(training_data), batch_size)]
