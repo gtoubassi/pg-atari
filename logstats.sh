@@ -3,8 +3,8 @@
 head $1  | grep Arguments..Names | tr '()' '  ' | tr -d , | tr ' ' '\n' | egrep -v Namesp | egrep -v '^$'
 echo ""
 
-echo  "Last 20 epoch ave scores:"
-cat $1 | awk '$1=="Episode" {SUM=SUM+$6;COUNT=COUNT+1} $1=="Training"&& SUM>0 {printf "%f\n",SUM/COUNT;SUM=0;COUNT=0}' | tail -20
+echo  "Last 15 epoch ave scores:"
+cat $1 | awk '$1=="Episode" {SUM=SUM+$6;COUNT=COUNT+1} $1=="Training"&& SUM>0 {printf "%f\n",SUM/COUNT;SUM=0;COUNT=0}' | tail -15
 
 echo -n "Number of parameter updates:  "
 grep Train $1 | awk '{print $7}'  | st --format=%d | tail -1 | awk '{print $4}'
